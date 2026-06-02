@@ -1,25 +1,37 @@
 {
   "expo": {
-    "name": "instalink-app",
+    "name": "InstaLink",
     "slug": "instalink-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "scheme": "instalink",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "com.kkustudio.instalink"
     },
     "android": {
+      "package": "com.kkustudio.instalink",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
-      },
-      "predictiveBackGestureEnabled": false
+        "backgroundColor": "#111827",
+        "foregroundImage": "./assets/android-icon-foreground.png"
+      }
     },
     "web": {
+      "bundler": "metro",
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        { "photosPermission": "프로필 사진을 변경하려면 사진 접근 권한이 필요합니다." }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
     }
   }
 }
