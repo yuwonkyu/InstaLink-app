@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Linking } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Linking, TextInput, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
@@ -16,6 +16,9 @@ export default function DashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [editingSlug, setEditingSlug] = useState(false);
+  const [slugInput, setSlugInput] = useState("");
+  const [slugSaving, setSlugSaving] = useState(false);
 
   async function fetchProfile() {
     if (!session?.user) return;
@@ -41,6 +44,27 @@ export default function DashboardScreen() {
     setRefreshing(true);
     await fetchProfile();
     setRefreshing(false);
+  }
+
+  async function handleSlugSave() {
+    if (!profile || !slugInput.trim()) return;
+    const slug = slugInput.trim().toLowerCase().replace(/[^a-z0-9-]/g, "");
+    if (slug.length < 2) {
+      Alert.alert("오류", "주소는 2자 이상이어야 합니다.");
+      return;
+    }
+    setSlugSaving(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ slug })
+      .eq("owner_id", session!.user.id);
+    setSlugSaving(false);
+    if (error) {
+      Alert.alert("오류", "이미 사용 중인 주소입니다.");
+    } else {
+      setProfile(prev => prev ? { ...prev, slug } : null);
+      setEditingSlug(false);
+    }
   }
 
   if (loading) {
@@ -99,25 +123,70 @@ export default function DashboardScreen() {
         {/* 내 링크 */}
         {profile && (
           <View className="bg-card rounded-3xl p-5 shadow-sm">
-            <Text className="text-sm font-semibold text-primary mb-3">내 링크</Text>
-            <TouchableOpacity
-              className="bg-secondary rounded-2xl px-4 py-3 flex-row items-center justify-between"
-              onPress={handleCopy}
-            >
-              <Text className="text-sm text-primary flex-1" numberOfLines={1}>
-                {SITE_URL}/{profile.slug}
-              </Text>
-              <Text className="text-xs font-semibold text-accent ml-2">
-                {copied ? "복사됨 ✓" : "복사"}
-              </Text>
-            </TouchableOpacity>
+            <View className="flex-row items-center justify-between mb-3">
+              <Text className="text-sm font-semibold text-primary">내 링크</Text>
+              {profile.plan === "pro" && !editingSlug && (
+                <TouchableOpacity onPress={() => { setSlugInput(profile.slug); setEditingSlug(true); }}>
+                  <Text className="text-xs font-semibold text-indigo-500">주소 변경</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            {editingSlug ? (
+              <View>
+                <View className="flex-row items-center bg-secondary rounded-2xl px-4 py-3 mb-2">
+                  <Text className="text-sm text-muted">{SITE_URL}/</Text>
+                  <TextInput
+                    className="flex-1 text-sm text-primary"
+                    value={slugInput}
+                    onChangeText={setSlugInput}
+                    autoFocus
+                    autoCapitalize="none"
+                    placeholder="새 주소 입력"
+                  />
+                </View>
+                <View className="flex-row gap-2">
+                  <TouchableOpacity
+                    className="flex-1 bg-primary rounded-2xl py-2.5 items-center"
+                    onPress={handleSlugSave}
+                    disabled={slugSaving}
+                  >
+                    <Text className="text-sm font-bold text-white">{slugSaving ? "저장 중…" : "저장"}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    className="flex-1 bg-secondary rounded-2xl py-2.5 items-center"
+                    onPress={() => setEditingSlug(false)}
+                  >
+                    <Text className="text-sm font-semibold text-muted">취소</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <TouchableOpacity
+                className="bg-secondary rounded-2xl px-4 py-3 flex-row items-center justify-between"
+                onPress={handleCopy}
+              >
+                <Text className="text-sm text-primary flex-1" numberOfLines={1}>
+                  {SITE_URL}/{profile.slug}
+                </Text>
+                <Text className="text-xs font-semibold text-accent ml-2">
+                  {copied ? "복사됨 ✓" : "복사"}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
-        {/* 방문자 수 */}
+        {/* 방문자 통계 */}
         {profile && (
           <View className="bg-card rounded-3xl p-5 shadow-sm">
-            <Text className="text-sm font-semibold text-primary mb-3">누적 방문자</Text>
+            <View className="flex-row items-center justify-between mb-3">
+              <Text className="text-sm font-semibold text-primary">누적 방문자</Text>
+              {(profile.plan === "pro" || profile.plan === "basic") && (
+                <TouchableOpacity onPress={() => router.push("/(app)/stats")}>
+                  <Text className="text-xs font-semibold text-blue-500">상세 통계 →</Text>
+                </TouchableOpacity>
+              )}
+            </View>
             <Text className="text-4xl font-black text-primary">
               {(profile.view_count ?? 0).toLocaleString()}
             </Text>
@@ -128,7 +197,12 @@ export default function DashboardScreen() {
         {/* 플랜 카드 */}
         {profile && (
           <View className="bg-card rounded-3xl p-5 shadow-sm">
-            <Text className="text-sm font-semibold text-primary mb-3">구독 플랜</Text>
+            <View className="flex-row items-center justify-between mb-3">
+              <Text className="text-sm font-semibold text-primary">구독 플랜</Text>
+              <TouchableOpacity onPress={() => router.push("/(app)/billing")}>
+                <Text className="text-xs font-semibold text-accent">플랜 변경 →</Text>
+              </TouchableOpacity>
+            </View>
             <View className="flex-row items-center gap-2 flex-wrap">
               <View className="bg-primary rounded-full px-3 py-1">
                 <Text className="text-xs font-bold text-white uppercase">{profile.plan}</Text>
@@ -139,7 +213,11 @@ export default function DashboardScreen() {
                 </View>
               )}
               <Text className="text-sm text-muted">
-                {profile.is_mvp ? "얼리어답터 무료" : PLAN_META[profile.plan]?.price === 0 ? "무료" : `${PLAN_META[profile.plan]?.price.toLocaleString()}원/월`}
+                {profile.is_mvp
+                  ? "얼리어답터 무료"
+                  : PLAN_META[profile.plan]?.price === 0
+                    ? "무료"
+                    : `${PLAN_META[profile.plan]?.price.toLocaleString()}원/월`}
               </Text>
             </View>
             {profile.is_mvp && (
