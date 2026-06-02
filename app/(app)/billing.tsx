@@ -108,6 +108,41 @@ export default function BillingScreen() {
           );
         })}
 
+        {/* 기능 비교표 */}
+        <View style={{ backgroundColor: "#fff", borderRadius: 24, overflow: "hidden" }}>
+          <Text style={{ fontSize: 11, fontWeight: "700", color: "#9CA3AF", textTransform: "uppercase", letterSpacing: 1, padding: 16, paddingBottom: 8 }}>
+            기능 비교
+          </Text>
+          {/* 헤더 */}
+          <View style={{ flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#F3F4F6", paddingHorizontal: 16, paddingBottom: 8 }}>
+            <Text style={{ flex: 2, fontSize: 11, color: "#9CA3AF" }}>기능</Text>
+            {(["Free", "Basic", "Pro"] as const).map(p => (
+              <Text key={p} style={{ flex: 1, fontSize: 11, fontWeight: "700", color: currentPlan.toLowerCase() === p.toLowerCase() ? "#111827" : "#9CA3AF", textAlign: "center" }}>
+                {p}{currentPlan.toLowerCase() === p.toLowerCase() ? " ●" : ""}
+              </Text>
+            ))}
+          </View>
+          {/* 행 */}
+          {[
+            { label: "프로필 페이지", free: "✓", basic: "✓", pro: "✓" },
+            { label: "카카오 버튼", free: "✓", basic: "✓", pro: "✓" },
+            { label: "테마", free: "1종", basic: "3종", pro: "7종" },
+            { label: "서비스 등록", free: "3개", basic: "6개", pro: "무제한" },
+            { label: "후기 등록", free: "3개", basic: "6개", pro: "무제한" },
+            { label: "갤러리", free: "3장", basic: "6장", pro: "15장" },
+            { label: "방문자 통계", free: "—", basic: "—", pro: "✓" },
+            { label: "AI 문구 추천", free: "—", basic: "—", pro: "✓" },
+            { label: "섹션·버튼 커스텀", free: "—", basic: "—", pro: "✓" },
+          ].map((row, i) => (
+            <View key={row.label} style={{ flexDirection: "row", paddingHorizontal: 16, paddingVertical: 10, backgroundColor: i % 2 === 0 ? "#fff" : "#F9FAFB" }}>
+              <Text style={{ flex: 2, fontSize: 12, color: "#111827" }}>{row.label}</Text>
+              <Text style={{ flex: 1, fontSize: 12, color: row.free === "—" ? "#D1D5DB" : "#111827", textAlign: "center" }}>{row.free}</Text>
+              <Text style={{ flex: 1, fontSize: 12, color: row.basic === "—" ? "#D1D5DB" : "#111827", textAlign: "center" }}>{row.basic}</Text>
+              <Text style={{ flex: 1, fontSize: 12, color: row.pro === "—" ? "#D1D5DB" : "#059669", textAlign: "center", fontWeight: row.pro === "✓" ? "700" : "400" }}>{row.pro}</Text>
+            </View>
+          ))}
+        </View>
+
         {/* 문의 */}
         <TouchableOpacity
           onPress={() => Linking.openURL("mailto:duck01777@gmail.com?subject=InstaLink 플랜 문의")}
