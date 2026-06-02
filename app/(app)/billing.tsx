@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, Linking } from "react-native";
+import { View, Text, TouchableOpacity, Linking, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
@@ -51,7 +51,7 @@ export default function BillingScreen() {
         <Text className="text-base font-bold text-primary">플랜 변경</Text>
       </View>
 
-      <View style={{ padding: 16, gap: 12 }}>
+      <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
         {/* MVP 배너 */}
         {isMvp && (
           <View className="bg-amber-50 border border-amber-200 rounded-3xl p-4">
@@ -110,12 +110,12 @@ export default function BillingScreen() {
 
         {/* 문의 */}
         <TouchableOpacity
-          onPress={() => Linking.openURL("mailto:duck01777@naver.com?subject=InstaLink 플랜 문의")}
+          onPress={() => Linking.openURL("mailto:duck01777@gmail.com?subject=InstaLink 플랜 문의")}
           className="items-center py-3"
         >
-          <Text className="text-xs text-muted">플랜 관련 문의: duck01777@naver.com</Text>
+          <Text className="text-xs text-muted">플랜 관련 문의: duck01777@gmail.com</Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
