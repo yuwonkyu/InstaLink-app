@@ -1,5 +1,15 @@
 import { useEffect } from "react";
+import { Alert } from "react-native";
 import { Stack } from "expo-router";
+
+// 크래시 원인 파악용 글로벌 에러 핸들러 (확인 후 삭제)
+if (typeof ErrorUtils !== "undefined") {
+  const prev = ErrorUtils.getGlobalHandler();
+  ErrorUtils.setGlobalHandler((error, isFatal) => {
+    Alert.alert("CRASH", `${error?.message}\n${error?.stack?.slice(0, 200)}`);
+    prev?.(error, isFatal);
+  });
+}
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as Linking from "expo-linking";
