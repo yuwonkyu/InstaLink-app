@@ -1,7 +1,29 @@
 import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from "react-native";
+import {
+  View, Text, TextInput, TouchableOpacity,
+  KeyboardAvoidingView, Platform, Alert,
+} from "react-native";
 import { Link, router } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
+import * as Linking from "expo-linking";
 import { supabase } from "@/lib/supabase";
+
+WebBrowser.maybeCompleteAuthSession();
+
+async function handleSocialLogin(provider: "google" | "kakao") {
+  const redirectTo = __DEV__ ? "exp+instalink-app:///" : "instalink:///";
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: { redirectTo, skipBrowserRedirect: true },
+  });
+  if (error || !data.url) {
+    Alert.alert("오류", "소셜 로그인을 시작할 수 없습니다.");
+    return;
+  }
+
+  // 브라우저 열기 — 딥링크 복귀 및 토큰 파싱은 _layout.tsx의 Linking 리스너가 처리
+  await WebBrowser.openBrowserAsync(data.url);
+}
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
@@ -32,6 +54,34 @@ export default function LoginScreen() {
         <Text className="text-3xl font-black text-primary mb-1">InstaLink</Text>
         <Text className="text-sm text-muted mb-10">인스타 바이오 링크 관리</Text>
 
+        {/* 소셜 로그인 */}
+        <View className="gap-3 mb-6">
+          <TouchableOpacity
+            className="w-full rounded-2xl py-4 items-center"
+            style={{ backgroundColor: "#FEE500", borderWidth: 1, borderColor: "#e8d600" }}
+            onPress={() => handleSocialLogin("kakao")}
+          >
+            <Text className="text-base font-bold" style={{ color: "#3C1E1E" }}>
+              카카오로 계속하기
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            className="w-full rounded-2xl bg-white py-4 items-center border border-gray-200"
+            onPress={() => handleSocialLogin("google")}
+          >
+            <Text className="text-base font-bold text-gray-700">Google로 계속하기</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* 구분선 */}
+        <View className="flex-row items-center gap-3 mb-6">
+          <View className="flex-1 h-px bg-gray-200" />
+          <Text className="text-xs text-muted">또는 이메일로 로그인</Text>
+          <View className="flex-1 h-px bg-gray-200" />
+        </View>
+
+        {/* 이메일 로그인 */}
         <View className="gap-3">
           <TextInput
             className="w-full rounded-2xl bg-secondary px-4 py-4 text-base text-primary"
@@ -53,7 +103,7 @@ export default function LoginScreen() {
         </View>
 
         <TouchableOpacity
-          className="mt-6 w-full rounded-2xl bg-primary py-4 items-center"
+          className="mt-4 w-full rounded-2xl bg-primary py-4 items-center"
           onPress={handleLogin}
           disabled={loading}
         >
@@ -75,3 +125,4 @@ export default function LoginScreen() {
     </KeyboardAvoidingView>
   );
 }
+
