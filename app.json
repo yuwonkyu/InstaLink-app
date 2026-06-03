@@ -21,7 +21,10 @@
       "adaptiveIcon": {
         "backgroundColor": "#111827",
         "foregroundImage": "./assets/android-icon-foreground.png"
-      }
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -32,11 +35,19 @@
       "expo-secure-store",
       [
         "expo-image-picker",
-        { "photosPermission": "프로필 사진을 변경하려면 사진 접근 권한이 필요합니다." }
+        {
+          "photosPermission": "프로필 사진을 변경하려면 사진 접근 권한이 필요합니다."
+        }
       ]
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "a3143218-f3b1-45ef-8b7f-2412ac9ad70b"
+      }
     }
   }
 }

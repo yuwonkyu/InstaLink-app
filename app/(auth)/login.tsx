@@ -5,13 +5,12 @@ import {
 } from "react-native";
 import { Link, router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
-import * as Linking from "expo-linking";
 import { supabase } from "@/lib/supabase";
 
 WebBrowser.maybeCompleteAuthSession();
 
 async function handleSocialLogin(provider: "google" | "kakao") {
-  const redirectTo = __DEV__ ? "exp+instalink-app:///" : "instalink:///";
+  const redirectTo = "https://instalink.kkustudio.com/app-redirect";
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
     options: { redirectTo, skipBrowserRedirect: true },
@@ -20,9 +19,12 @@ async function handleSocialLogin(provider: "google" | "kakao") {
     Alert.alert("오류", "소셜 로그인을 시작할 수 없습니다.");
     return;
   }
-
-  // 브라우저 열기 — 딥링크 복귀 및 토큰 파싱은 _layout.tsx의 Linking 리스너가 처리
-  await WebBrowser.openBrowserAsync(data.url);
+  const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+  if (result.type === "success") {
+    const { error: err } = await supabase.auth.exchangeCodeForSession(result.url);
+    if (err) Alert.alert("오류", "로그인 처리에 실패했습니다.");
+    else router.replace("/(app)");
+  }
 }
 
 export default function LoginScreen() {
@@ -38,11 +40,8 @@ export default function LoginScreen() {
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     setLoading(false);
-    if (error) {
-      Alert.alert("로그인 실패", "이메일 또는 비밀번호를 확인해주세요.");
-    } else {
-      router.replace("/(app)");
-    }
+    if (error) Alert.alert("로그인 실패", "이메일 또는 비밀번호를 확인해주세요.");
+    else router.replace("/(app)");
   }
 
   return (
@@ -125,4 +124,3 @@ export default function LoginScreen() {
     </KeyboardAvoidingView>
   );
 }
-

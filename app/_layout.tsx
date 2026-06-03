@@ -15,20 +15,16 @@ export default function RootLayout() {
     initialize();
   }, []);
 
-  // OAuth 딥링크로 돌아왔을 때 토큰 처리
   useEffect(() => {
-    const subscription = Linking.addEventListener("url", ({ url }) => {
-      const fragment = url.includes("#") ? url.split("#")[1] : url.split("?")[1] ?? "";
-      const params = new URLSearchParams(fragment);
-      const access_token = params.get("access_token");
-      const refresh_token = params.get("refresh_token");
-      if (access_token && refresh_token) {
-        WebBrowser.dismissBrowser();
-        supabase.auth.setSession({ access_token, refresh_token }).then(({ error }) => {
-          if (!error) router.replace("/(app)");
-        });
-      }
-    });
+    async function handleOAuthUrl(url: string) {
+      if (!url.includes("code=")) return;
+      WebBrowser.dismissBrowser();
+      const { error } = await supabase.auth.exchangeCodeForSession(url);
+      if (!error) router.replace("/(app)");
+    }
+
+    Linking.getInitialURL().then((url) => { if (url) handleOAuthUrl(url); });
+    const subscription = Linking.addEventListener("url", ({ url }) => handleOAuthUrl(url));
     return () => subscription.remove();
   }, []);
 
