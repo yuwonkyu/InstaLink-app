@@ -1,10 +1,11 @@
 import { useState } from "react";
 import {
   View, Text, TextInput, TouchableOpacity,
-  KeyboardAvoidingView, Platform, Alert,
+  KeyboardAvoidingView, Platform, Alert, Linking,
 } from "react-native";
 import { Link, router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -19,11 +20,68 @@ async function handleSocialLogin(provider: "google" | "kakao") {
     Alert.alert("오류", "소셜 로그인을 시작할 수 없습니다.");
     return;
   }
+
+  // 딥링크로 code가 돌아오면 SDK lock/race 우회 - AsyncStorage에서 직접 verifier 읽어 수동 교환
+  const subscription = Linking.addEventListener("url", async ({ url }) => {
+    if (!url.includes("app-redirect")) return;
+    subscription.remove();
+    WebBrowser.dismissBrowser();
+
+    const match = url.match(/[?&]code=([^&]+)/);
+    const authCode = match?.[1];
+    if (!authCode) {
+      Alert.alert("오류", "인증 코드를 찾을 수 없습니다.");
+      return;
+    }
+
+    // SDK 내부 lock/race 우회: AsyncStorage에서 직접 verifier를 읽어 REST API로 교환
+    const sbKey = (supabase.auth as any).storageKey ?? "";
+    const rawVerifier = await AsyncStorage.getItem(`${sbKey}-code-verifier`);
+    const codeVerifier = rawVerifier ? JSON.parse(rawVerifier).split("/")[0] : null;
+
+    if (!codeVerifier) {
+      Alert.alert("오류", "PKCE verifier를 찾을 수 없습니다.");
+      return;
+    }
+
+    const supabaseUrl = (supabase as any).supabaseUrl as string;
+    const supabaseKey = (supabase as any).supabaseKey as string;
+
+    try {
+      const res = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=pkce`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: supabaseKey },
+        body: JSON.stringify({ auth_code: authCode, code_verifier: codeVerifier }),
+      });
+      const tokenData = await res.json();
+      if (!res.ok || !tokenData.access_token) {
+        Alert.alert("소셜 로그인 실패", tokenData.error_description ?? tokenData.message ?? "교환 실패");
+        return;
+      }
+      await supabase.auth.setSession({ access_token: tokenData.access_token, refresh_token: tokenData.refresh_token });
+      await AsyncStorage.removeItem(`${sbKey}-code-verifier`);
+      router.replace("/(app)");
+    } catch (e: any) {
+      Alert.alert("소셜 로그인 실패", e.message);
+    }
+  });
+
   const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+
+  // iOS 등 openAuthSessionAsync가 직접 URL 캡처한 경우
   if (result.type === "success") {
-    const { error: err } = await supabase.auth.exchangeCodeForSession(result.url);
-    if (err) Alert.alert("오류", "로그인 처리에 실패했습니다.");
-    else router.replace("/(app)");
+    subscription.remove();
+    const match = result.url.match(/[?&]code=([^&]+)/);
+    const code = match?.[1];
+    if (code) {
+      const { error: err } = await supabase.auth.exchangeCodeForSession(code);
+      if (err) Alert.alert("소셜 로그인 실패", err.message);
+      else router.replace("/(app)");
+    }
+  } else {
+    // 안드로이드: 브라우저가 dismiss됐지만 Linking 이벤트가 뒤늦게 올 수 있음
+    // 2초 후에 구독 해제
+    setTimeout(() => subscription.remove(), 2000);
   }
 }
 

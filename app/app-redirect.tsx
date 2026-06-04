@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { View, ActivityIndicator } from "react-native";
+import { View, ActivityIndicator, Alert } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { supabase } from "@/lib/supabase";
 
@@ -7,22 +7,22 @@ export default function AppRedirect() {
   const { code } = useLocalSearchParams<{ code?: string }>();
 
   useEffect(() => {
-    if (code === undefined) return;
+    if (!code) return;
 
-    async function exchange() {
-      const codeStr = Array.isArray(code) ? code[0] : code;
-      if (!codeStr) {
-        router.replace("/(auth)/login");
-        return;
+    async function waitForSession() {
+      // login.tsx의 Linking 리스너가 PKCE 교환 중 — 세션 생길 때까지 최대 5초 대기
+      for (let i = 0; i < 17; i++) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          router.replace("/(app)");
+          return;
+        }
+        await new Promise(resolve => setTimeout(resolve, 300));
       }
-      const { error } = await supabase.auth.exchangeCodeForSession(codeStr);
-      if (error) {
-        router.replace("/(auth)/login");
-      } else {
-        router.replace("/(app)");
-      }
+      Alert.alert("소셜 로그인 실패", "다시 시도해주세요.", [{ text: "확인" }]);
+      router.replace("/(auth)/login");
     }
-    exchange();
+    waitForSession();
   }, [code]);
 
   return (
