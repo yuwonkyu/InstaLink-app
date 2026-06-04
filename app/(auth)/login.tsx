@@ -60,6 +60,7 @@ async function handleSocialLogin(provider: "google" | "kakao") {
       }
       await supabase.auth.setSession({ access_token: tokenData.access_token, refresh_token: tokenData.refresh_token });
       await AsyncStorage.removeItem(`${sbKey}-code-verifier`);
+      router.dismissAll();
       router.replace("/(app)");
     } catch (e: any) {
       Alert.alert("소셜 로그인 실패", e.message);

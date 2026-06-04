@@ -14,6 +14,7 @@ export default function AppRedirect() {
       for (let i = 0; i < 17; i++) {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
+          router.dismissAll();
           router.replace("/(app)");
           return;
         }
